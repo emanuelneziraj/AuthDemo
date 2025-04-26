@@ -120,3 +120,5 @@ app.*.symbols
 
 .DS_Store
 .idea/
+obj/
+bin/
