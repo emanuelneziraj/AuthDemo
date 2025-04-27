@@ -109,12 +109,11 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              if (authService.isLoading) // Zeige Ladeindikator während Login/Logout
+              if (authService.isLoading)
                 CircularProgressIndicator()
               else if (authService.isLoggedIn) ...[ // Wenn eingeloggt
                 Text('Willkommen, ${authService.userProfile?.name ?? 'Benutzer'}!'),
                 Text('Email: ${authService.userProfile?.email ?? 'N/A'}'),
-                // Text('Access Token: ${authService.credentials?.accessToken ?? 'N/A'}'), // Nur zum Debuggen anzeigen
                 SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: authService.logout,

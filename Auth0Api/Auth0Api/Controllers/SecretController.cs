@@ -13,7 +13,8 @@ public class SecretController : ControllerBase
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        return Ok(new { Message = $"Hallo User {userId}! Dies sind geheime Daten von der API. Uhrzeit: {DateTime.UtcNow}" });
+        return Ok(new { Message = $"Hallo User {userId}" +
+                                  $"\nDies sind geheime Daten von der API." });
     }
 
     [HttpGet("public")]

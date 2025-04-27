@@ -1,4 +1,3 @@
-// lib/auth_service.dart
 import 'package:flutter/foundation.dart';
 import 'package:auth0_flutter/auth0_flutter.dart';
 import 'package:auth0_flutter/auth0_flutter_web.dart';
@@ -10,7 +9,7 @@ class AuthService with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
-  Auth0Web? _auth0Web; // Spezifisch für Web
+  Auth0Web? _auth0Web;
 
   AuthService() {
     _initAuth0();
@@ -19,7 +18,7 @@ class AuthService with ChangeNotifier {
   // --- Getters ---
   bool get isLoggedIn => _credentials != null;
   UserProfile? get userProfile => _userProfile;
-  Credentials? get credentials => _credentials; // Enthält das Access Token
+  Credentials? get credentials => _credentials;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
@@ -52,29 +51,21 @@ class AuthService with ChangeNotifier {
       _setError("Login ist nur im Web verfügbar.");
       return;
     }
-
     _setLoading(true);
     _setError(null);
     try {
       // Startet den Redirect-Flow. Wichtig: audience angeben!
       await _auth0Web!.loginWithRedirect(
         redirectUrl: '${Uri.base.origin}/',
-        audience: auth0ApiAudience, // Audience hinzufügen
-        parameters: {
-          'scope': 'openid profile email', // Optional: Scopes anpassen
-        },
+        audience: auth0ApiAudience,
+        scopes: {'openid', 'profile', 'email'}
       );
-      // Nach dem Redirect wird die App neu geladen.
-      // Wir müssen die Credentials nach dem Neuladen abrufen.
-      // Dies geschieht normalerweise in main.dart oder beim App-Start.
-      // Hier setzen wir nur Loading, der Rest passiert nach dem Redirect.
 
     } catch (e) {
       print("Generic Login Error: $e");
      _setError("Ein unerwarteter Fehler ist aufgetreten.");
      _setLoading(false);
     }
-    // Kein setLoading(false) hier, da der Redirect erfolgt.
   }
 
    // --- Handle Login Callback ---
@@ -85,24 +76,32 @@ class AuthService with ChangeNotifier {
      _setLoading(true);
      _setError(null);
      try {
-       // Prüft, ob Credentials im URL-Fragment vorhanden sind und holt sie ab
-       final creds = await _auth0Web!.onLoad();
+       // Prüft, ob Credentials im URL-Fragment vorhanden sind UND initialisiert
+       final creds = await _auth0Web!.onLoad(
+         audience: auth0ApiAudience,
+         scopes: {'openid', 'profile', 'email'},
+       );
 
        if (creds != null) {
           _credentials = creds;
           _userProfile = creds.user;
-           print("Login erfolgreich! Access Token: ${creds.tokenType} ${creds.expiresAt} ${creds.idToken}");
-           print("User: ${creds.user.name}");
+           print("--- Credentials Details ---");
+           print("Access Token: ${creds.accessToken}");
+           print("Token Type: ${creds.tokenType}");
+           print("Expires At: ${creds.expiresAt}");
+           notifyListeners();
+
        } else {
            print("Keine Credentials nach Callback gefunden.");
            // Evtl. prüfen, ob schon vorher eingeloggt?
        }
      } catch (e) {
         print("Generic Callback Error: $e");
-        _credentials = null;
-        _userProfile = null;
+        _credentials = null; // Zustand löschen
+        _userProfile = null; // Zustand löschen
+        _setError("Fehler beim Verarbeiten des Login-Callbacks: $e"); // Ruft notifyListeners
      } finally {
-       _setLoading(false);
+       _setLoading(false); // Ruft notifyListeners
      }
    }
 
@@ -123,17 +122,14 @@ class AuthService with ChangeNotifier {
        // Effektives löschen der lokalen Daten passiert beim Neuladen oder manuell:
        _credentials = null;
        _userProfile = null;
-       // notifyListeners(); // Wird durch Neuladen der App überflüssig
     } catch (e) {
        print("Generic Logout Error: $e");
       _setLoading(false);
     }
-     // Kein setLoading(false) bei Erfolg, da Redirect erfolgt.
   }
 
   // --- Access Token abrufen ---
-  // Das Access Token ist bereits in _credentials vorhanden
   String? getAccessToken() {
-    return _credentials?.idToken;
+    return _credentials?.accessToken;
   }
 }

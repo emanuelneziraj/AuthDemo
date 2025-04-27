@@ -4,6 +4,9 @@ using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var authenticationSettings = builder.Configuration.GetSection("Auth0");
+
+
 // --- CORS Konfiguration ---
 var flutterAppOrigin = "http://localhost:5000";
 builder.Services.AddCors(options =>
@@ -24,9 +27,9 @@ builder.Services.AddAuthentication(options =>
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(options =>
 {
-    options.Authority = "https://dev-u5cia72lx8dok4is.us.auth0.com/";
+    options.Authority = authenticationSettings["Domain"];
 
-    options.Audience = "https://localhost:7294/";
+    options.Audience = authenticationSettings["Audience"];
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -52,8 +55,41 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "AuthDemo API",
+        Version = "v1"
+    });
 
+    // Sicherheitsdefinition für JWT
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Geben Sie den JWT-Token ein. Beispiel: Bearer {token}"
+    });
+
+    // Sicherheitsanforderungen
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
